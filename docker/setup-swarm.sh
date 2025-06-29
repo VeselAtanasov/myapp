@@ -134,8 +134,12 @@ docker exec -it manager docker network ls
 
 echo ""
 echo "[13/13] Web app is deployed and running."
-echo "You can now test the app in your terminal using:"
-echo ""
+echo "📌 Access from inside Linux machine terminal:"
 echo "   lynx http://localhost:8080"
+
+# Detect VM's real IP (not container IP)
+VM_IP=$(hostname -I | awk '{print $1}')
+
 echo ""
-echo "🎉 Setup complete!"
+echo "🌍 Access from Windows browser (your VM IP):"
+echo "   http://$VM_IP:8080"
