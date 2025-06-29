@@ -2,7 +2,7 @@
 
 set -e
 
-APP_DIR="/home/ansible/myapp/docker"
+APP_DIR="/opt/myapp/docker"
 BRIDGE_NET="swarm-bridge"
 OVERLAY_NET="swarm-net"
 MANAGER_IP="192.168.99.100"
