@@ -65,7 +65,7 @@ docker run -dit --privileged --name manager \
   docker:dind
 
 echo "[8/13] Waiting for manager's Docker to restart..."
-sleep 6
+sleep 10
 
 echo "[9/13] Building PHP image from ./www..."
 docker build -t $IMAGE_NAME "$APP_DIR/www"
@@ -83,7 +83,7 @@ docker exec -i manager sh -c "
 
 echo ""
 echo "[11.5/13] Waiting briefly for services to initialize (10 sec)..."
-sleep 10
+sleep 20
 
 echo ""
 echo "[12/13] Verifying Swarm status..."
