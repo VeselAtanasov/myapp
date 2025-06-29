@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 APP_DIR="/opt/myapp/docker"
@@ -45,13 +44,13 @@ echo "[4/13] Waiting for Docker to initialize..."
 sleep 6
 
 echo "[5/13] Initializing Docker Swarm..."
-docker exec -it manager docker swarm init --advertise-addr $MANAGER_IP || true
-JOIN_TOKEN=$(docker exec -it manager docker swarm join-token -q worker | tr -d '\r')
+docker exec manager docker swarm init --advertise-addr $MANAGER_IP || true
+JOIN_TOKEN=$(docker exec manager docker swarm join-token -q worker | tr -d '\r')
 JOIN_CMD="docker swarm join --token $JOIN_TOKEN $MANAGER_IP:2377"
 
 echo "[6/13] Joining workers to the Swarm..."
 for NODE in worker1 worker2; do
-  docker exec -it $NODE $JOIN_CMD || echo "$NODE already joined."
+  docker exec $NODE $JOIN_CMD || echo "$NODE already joined."
 done
 
 echo "[7/13] Replacing manager with volume + port 8080 exposed..."
@@ -83,63 +82,72 @@ docker exec -i manager sh -c "
 "
 
 echo ""
-echo "[11.5/13] Waiting briefly for services to initialize 10sec..."
+echo "[11.5/13] Waiting briefly for services to initialize (10 sec)..."
 sleep 10
 
 echo ""
 echo "[12/13] Verifying Swarm status..."
 
-echo ""
-echo "Swarm Nodes:"
-docker exec -it manager docker node ls
+if [ -t 1 ]; then
+  echo ""
+  echo "🧠 Swarm Nodes:"
+  docker exec manager docker node ls || echo "❌ Could not retrieve node info."
 
-echo ""
-echo "Services:"
-docker exec -it manager docker service ls
+  echo ""
+  echo "📦 Services:"
+  docker exec manager docker service ls || echo "❌ Could not retrieve service list."
 
-echo ""
-echo "🧱 Web Service Tasks:"
-docker exec -it manager docker service ps myapp_web
+  echo ""
+  echo "🧱 Web Service Tasks:"
+  docker exec manager docker service ps myapp_web || echo "❌ Could not get service tasks."
 
-echo ""
-echo "Docker-in-Docker Node IPs (swarm-bridge):"
-for NODE in manager worker1 worker2; do
-  IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $NODE)
-  echo "  $NODE → $IP"
-done
-
-echo ""
-echo "Container IPs (swarm-net):"
-docker exec -i manager sh -c '
-  echo "- Web Containers:"
-  for cid in $(docker ps -q --filter name=myapp_web); do
-    echo "  Container: $cid"
-    docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
+  echo ""
+  echo "🌐 Docker-in-Docker Node IPs (swarm-bridge):"
+  for NODE in manager worker1 worker2; do
+    IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $NODE)
+    echo "  $NODE → $IP"
   done
 
-  echo "- DB Container:"
-  cid=$(docker ps -q --filter name=myapp_db)
-  if [ -n "$cid" ]; then
-    docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
-  else
-    echo "    ⚠️ DB container not running."
-    docker service ps myapp_db
-    docker service logs myapp_db
-  fi
-'
+  echo ""
+  echo "🌐 Container IPs (swarm-net):"
+  docker exec -i manager sh -c '
+    echo "- Web Containers:"
+    for cid in $(docker ps -q --filter name=myapp_web); do
+      echo "  Container: $cid"
+      docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
+    done
+
+    echo "- DB Container:"
+    cid=$(docker ps -q --filter name=myapp_db)
+    if [ -n "$cid" ]; then
+      docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
+    else
+      echo "    ⚠️ DB container not running."
+      docker service ps myapp_db
+      docker service logs myapp_db
+    fi
+  '
+
+  echo ""
+  echo "🔗 Networks:"
+  docker exec manager docker network ls || echo "❌ Could not list networks."
+
+else
+  echo "⚠️  Skipped verification section: not a TTY environment (Vagrant provisioning)."
+fi
 
 echo ""
-echo "Networks:"
-docker exec -it manager docker network ls
+echo "[13/13] Web app is deployed and running! 🚀"
 
-echo ""
-echo "[13/13] Web app is deployed and running."
-echo "📌 Access from inside Linux machine terminal:"
-echo "   lynx http://localhost:8080"
-
-# Detect VM's real IP (not container IP)
 VM_IP=$(hostname -I | awk '{print $1}')
 
 echo ""
-echo "🌍 Access from Windows browser (your VM IP):"
+echo "📌 Access from inside Linux terminal:"
+echo "   lynx http://localhost:8080"
+
+echo ""
+echo "🌍 Access from Windows browser (replace with your VM IP if needed):"
 echo "   http://$VM_IP:8080"
+
+echo ""
+echo "🎉 Setup complete!"
