@@ -89,26 +89,26 @@ echo ""
 echo "[12/13] Verifying Swarm status..."
 
 echo ""
-echo "🧠 Swarm Nodes:"
+echo "Swarm Nodes:"
 docker exec -i manager docker node ls || echo "❌ Could not retrieve node info."
 
 echo ""
-echo "📦 Services:"
+echo "Services:"
 docker exec -i manager docker service ls || echo "❌ Could not retrieve service list."
 
 echo ""
-echo "🧱 Web Service Tasks:"
+echo "Web Service Tasks:"
 docker exec -i manager docker service ps myapp_web || echo "❌ Could not get service tasks."
 
 echo ""
-echo "🌐 Docker-in-Docker Node IPs (swarm-bridge):"
+echo "Docker-in-Docker Node IPs (swarm-bridge):"
 for NODE in manager worker1 worker2; do
   IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $NODE)
   echo "  $NODE → $IP"
 done
 
 echo ""
-echo "🌐 Container IPs (swarm-net):"
+echo "Container IPs (swarm-net):"
 docker exec -i manager sh -c '
   echo "- Web Containers:"
   for cid in $(docker ps -q --filter name=myapp_web); do
@@ -121,14 +121,14 @@ docker exec -i manager sh -c '
   if [ -n "$cid" ]; then
     docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
   else
-    echo "    ⚠️ DB container not running."
+    echo "DB container not running."
     docker service ps myapp_db
     docker service logs myapp_db
   fi
 '
 
 echo ""
-echo "🔗 Networks:"
+echo "Networks:"
 docker exec -i manager docker network ls || echo "❌ Could not list networks."
 
 echo ""
@@ -137,12 +137,12 @@ echo "[13/13] Web app is deployed and running! 🚀"
 VM_IP=$(hostname -I | awk '{print $1}')
 
 echo ""
-echo "📌 Access from inside Linux terminal:"
+echo "Access from inside Linux terminal:"
 echo "   lynx http://localhost:8080"
 
 echo ""
-echo "🌍 Access from Windows browser (replace with your VM IP if needed):"
+echo "Access from Windows browser (replace with your VM IP if needed):"
 echo "   http://$VM_IP:8080"
 
 echo ""
-echo "🎉 Setup complete!"
+echo "Setup complete!"
