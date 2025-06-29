@@ -88,53 +88,48 @@ sleep 10
 echo ""
 echo "[12/13] Verifying Swarm status..."
 
-if [ -t 1 ]; then
-  echo ""
-  echo "🧠 Swarm Nodes:"
-  docker exec manager docker node ls || echo "❌ Could not retrieve node info."
+echo ""
+echo "🧠 Swarm Nodes:"
+docker exec -i manager docker node ls || echo "❌ Could not retrieve node info."
 
-  echo ""
-  echo "📦 Services:"
-  docker exec manager docker service ls || echo "❌ Could not retrieve service list."
+echo ""
+echo "📦 Services:"
+docker exec -i manager docker service ls || echo "❌ Could not retrieve service list."
 
-  echo ""
-  echo "🧱 Web Service Tasks:"
-  docker exec manager docker service ps myapp_web || echo "❌ Could not get service tasks."
+echo ""
+echo "🧱 Web Service Tasks:"
+docker exec -i manager docker service ps myapp_web || echo "❌ Could not get service tasks."
 
-  echo ""
-  echo "🌐 Docker-in-Docker Node IPs (swarm-bridge):"
-  for NODE in manager worker1 worker2; do
-    IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $NODE)
-    echo "  $NODE → $IP"
+echo ""
+echo "🌐 Docker-in-Docker Node IPs (swarm-bridge):"
+for NODE in manager worker1 worker2; do
+  IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $NODE)
+  echo "  $NODE → $IP"
+done
+
+echo ""
+echo "🌐 Container IPs (swarm-net):"
+docker exec -i manager sh -c '
+  echo "- Web Containers:"
+  for cid in $(docker ps -q --filter name=myapp_web); do
+    echo "  Container: $cid"
+    docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
   done
 
-  echo ""
-  echo "🌐 Container IPs (swarm-net):"
-  docker exec -i manager sh -c '
-    echo "- Web Containers:"
-    for cid in $(docker ps -q --filter name=myapp_web); do
-      echo "  Container: $cid"
-      docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
-    done
+  echo "- DB Container:"
+  cid=$(docker ps -q --filter name=myapp_db)
+  if [ -n "$cid" ]; then
+    docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
+  else
+    echo "    ⚠️ DB container not running."
+    docker service ps myapp_db
+    docker service logs myapp_db
+  fi
+'
 
-    echo "- DB Container:"
-    cid=$(docker ps -q --filter name=myapp_db)
-    if [ -n "$cid" ]; then
-      docker inspect --format="    {{.Name}} - {{with index .NetworkSettings.Networks \"swarm-net\"}}{{.IPAddress}}{{end}}" $cid
-    else
-      echo "    ⚠️ DB container not running."
-      docker service ps myapp_db
-      docker service logs myapp_db
-    fi
-  '
-
-  echo ""
-  echo "🔗 Networks:"
-  docker exec manager docker network ls || echo "❌ Could not list networks."
-
-else
-  echo "⚠️  Skipped verification section: not a TTY environment (Vagrant provisioning)."
-fi
+echo ""
+echo "🔗 Networks:"
+docker exec -i manager docker network ls || echo "❌ Could not list networks."
 
 echo ""
 echo "[13/13] Web app is deployed and running! 🚀"
